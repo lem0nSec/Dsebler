@@ -53,12 +53,12 @@ typedef struct _OBJECT_NAME_INFORMATION {
 
 typedef struct _IPC_SET_FUNCTION_RETURN_DEEP_PARAMETER {
     UINT64 rip;         // gadget : mov [rcx], rdx ; ret
-    UINT64 parameter;   // position: rcx --> &g_cioptions
+    UINT64 rcx;   // position: rcx --> &g_cioptions
 } IPC_SET_FUNCTION_RETURN_DEEP_PARAMETER, * PIPC_SET_FUNCTION_RETURN_DEEP_PARAMETER;
 
 typedef struct _IPC_SET_FUNCTION_RETURN_PARAMETER {
     PIPC_SET_FUNCTION_RETURN_DEEP_PARAMETER pInternalStruct;
-    UINT16 parameter;
+    UINT16 rdx;
 } IPC_SET_FUNCTION_RETURN_PARAMETER, * PIPC_SET_FUNCTION_RETURN_PARAMETER;
 
 typedef struct _REPLACEABLE_POINTER {
