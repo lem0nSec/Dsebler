@@ -10,6 +10,14 @@
 
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
 
+#if !defined(PRINT_ERROR)
+#define PRINT_ERROR(...) (wprintf(L"[-] ERROR : " __VA_ARGS__))
+#endif
+
+#if !defined(PRINT_SUCCESS)
+#define PRINT_SUCCESS(...) (wprintf(L"[+] SUCCESS : " __VA_ARGS__))
+#endif
+
 typedef struct _SYSTEM_HANDLE {
     ULONG ProcessId; // pid of the process which holds the handle
     BYTE ObjectTypeNumber;
@@ -122,5 +130,8 @@ typedef HLOCAL      (WINAPI* PLOCALALLOC) (__in UINT uFlags, __in SIZE_T uBytes)
 typedef HLOCAL      (WINAPI* PLOCALFREE) (__deref HLOCAL hMem);
 typedef int         (NTAPI* PWCSCMP)(const wchar_t* string1, const wchar_t* string2);
 
-LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count);
-BOOL EnablePrivilege(LPWSTR SePrivilege);
+LPVOID              ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count);
+BOOL                EnablePrivilege(LPWSTR SePrivilege);
+LPVOID              GetDriverBaseAddress(LPSTR DeviceDriverName);
+WINDOWS_VERSION     GetOsBuildNumber();
+DWORD               GetLsaProcessId();

