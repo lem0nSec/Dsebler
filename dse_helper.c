@@ -1,5 +1,58 @@
 #include "dse.h"
 
+BOOL SetPrivilege(HANDLE hToken, LPWSTR SePrivilege, BOOL bEnablePrivilege)
+{
+	TOKEN_PRIVILEGES tp = { 0 };
+	PRIVILEGE_SET privs = { 0 };
+	LUID luid = { 0 };
+	BOOL status = FALSE;
+
+	if (!LookupPrivilegeValueW(NULL, SePrivilege, &luid))
+	{
+		return status;
+	}
+
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Luid = luid;
+	if (bEnablePrivilege)
+	{
+		tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+	}
+	else
+	{
+		tp.Privileges[0].Attributes = 0;
+	}
+
+	if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL))
+	{
+		return status;
+	}
+
+	// test privs
+	privs.PrivilegeCount = 1;
+	privs.Control = PRIVILEGE_SET_ALL_NECESSARY;
+	privs.Privilege[0].Luid = luid;
+	privs.Privilege[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+	PrivilegeCheck(hToken, &privs, &status);
+
+	return status;
+}
+
+BOOL EnablePrivilege(LPWSTR SePrivilege)
+{
+	HANDLE currentProcessToken = NULL;
+	BOOL status = FALSE;
+
+	if (OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &currentProcessToken) == TRUE)
+	{
+		status = SetPrivilege(currentProcessToken, SePrivilege, TRUE);
+		CloseHandle(currentProcessToken);
+	}
+
+	return status;
+}
+
 LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count)
 {
 	LPVOID RemoteHandler = 0;
@@ -51,8 +104,6 @@ LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPL
 			VirtualFreeEx(hProcess, RemoteHandler, 0, MEM_RELEASE);
 			goto error;
 		}
-		else
-			goto error;
 	}
 
 	return RemoteHandler;

