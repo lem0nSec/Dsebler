@@ -122,6 +122,8 @@ static const ULONG NTOSKRNL_GADGET_OFFSET[] =
 };
 
 
+typedef VOID        (NTAPI* PRTLINITUNICODESTRING)(_Inout_ PUNICODE_STRING DestinationString, _In_opt_ PCWSTR SourceString);
+typedef NTSTATUS    (NTAPI* PNTOPENFILE)(_Out_ HANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess, POBJECT_ATTRIBUTES ObjectAttributes, _Out_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG ShareAccess, _In_ ULONG OpenOptions);
 typedef NTSTATUS    (NTAPI* PRTLGETVERSION)(_Out_ PRTL_OSVERSIONINFOW lpVersionInformation);
 typedef NTSTATUS    (NTAPI* PNTQUERYSYSTEMINFORMATION)(_In_ int SystemInformationClass, _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
 typedef NTSTATUS    (NTAPI* PNTQUERYOBJECT)(_In_opt_ HANDLE Handle, _In_ int ObjectInfoClass, _Out_opt_ PVOID ObjectInformation, _In_ ULONG ObjectInformationLength, _Out_opt_ PULONG ReturnLength);
