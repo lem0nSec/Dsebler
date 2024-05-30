@@ -86,7 +86,7 @@ typedef enum _WINDOWS_VERSION
 
 } WINDOWS_VERSION;
 
-static const ULONG CI_G_CI_OPTIONS_OFFSET[] =
+static const ULONG CI_G_CIOPTIONS_OFFSET[] =
 {
     0x00,
     0x00,

