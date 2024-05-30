@@ -1,4 +1,11 @@
-#include "dse.h"
+/*
+* Angelo Frasca Caccia
+* 30/05/2024
+* https://www.github.com/Dsebler
+*/
+
+
+#include "Dsebler.h"
 
 BOOL SetPrivilege(HANDLE hToken, LPWSTR SePrivilege, BOOL bEnablePrivilege)
 {

@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dse.c">
+    <ClCompile Include="src\Dsebler.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dse_helper.c">
+    <ClCompile Include="src\Dsebler_utils.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dse.h">
+    <ClInclude Include="src\Dsebler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

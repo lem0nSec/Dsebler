@@ -1,3 +1,10 @@
+/*
+* Angelo Frasca Caccia
+* 30/05/2024
+* https://www.github.com/Dsebler
+*/
+
+
 #pragma once
 
 #include <Windows.h>

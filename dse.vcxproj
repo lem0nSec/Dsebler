@@ -24,6 +24,7 @@
     <ProjectGuid>{b0d10307-629b-439c-a765-97d9ac1870ce}</ProjectGuid>
     <RootNamespace>dse</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Dsebler</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -144,11 +145,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dse.c" />
-    <ClCompile Include="dse_helper.c" />
+    <ClCompile Include="src\Dsebler.c" />
+    <ClCompile Include="src\Dsebler_utils.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="dse.h" />
+    <ClInclude Include="src\Dsebler.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
