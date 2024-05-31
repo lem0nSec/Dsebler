@@ -51,5 +51,9 @@ Attempting to load the unsigned driver of [KBlast](https://github.com/lem0nSec/K
 ![](pictures/7.png)
 
 
+## Warning :warning:
+This code was developed and tested on a Windows 10.0 build 19045.4412 virtual machine. It will cause system crash if it is used on a different OS due to other OS' offsets not being implemented at the moment. If you are aware of other OS' offsets for g_cioptions and the ntoskrnl gadget used, do open a pull request!
+
+
 ## Reference
 https://github.com/floesen/KExecDD
