@@ -1,5 +1,5 @@
 # Dsebler
-Dsebler is a reimplementation of the __Driver Signature Enforcement (DSE) bypass technique__ showed by [floesen](https://github.com/floesen/KExecDD). The code was restructured and reorganized with the possibility of easily adding ntoskrnl gadget and g_cioptions offsets. I also preferred the injection of a code block with replacable function pointers over dll injection. That said, this repo is a technical analysis of the technique. The code here is temporary, and the repo will be archived as soon as the technique will be added to ![KBlast](https://github.com/lem0nSec/KBlast).
+Dsebler is a reimplementation of the __Driver Signature Enforcement (DSE) bypass technique__ showed by [floesen](https://github.com/floesen/KExecDD). The code was restructured and reorganized with the possibility of easily adding ntoskrnl gadget and g_cioptions offsets. I also preferred the injection of a code block with replaceable function pointers over dll injection. That said, this repo is a technical analysis of the technique. The code here is temporary, and the repo will be archived as soon as the technique will be added to ![KBlast](https://github.com/lem0nSec/KBlast).
 
 ## DSE?
 Driver Signature Enforcement is a Microsoft security feature which ensures that only trusted and verified drivers can be loaded onto the Windows operating system. This is among other things to prevent untrusted and potentially malicious software to cause harm to the OS. Since the value which regulates the behaviour of DSE is inside the Windows kernel itself, it cannot be technically disabled from userland unless a vulnerability is found on a trusted driver which allows for arbitrary writing on the Windows kernel.
@@ -42,7 +42,7 @@ Moving on it can be seen that the CallInProgressCompleted function finally calls
 ![](pictures/2.png)
 
 
-By Stepping into the next instruction g_cioptions gets successfully overwritten with 0 and DSE disabled.
+By stepping into the next instruction g_cioptions gets successfully overwritten with 0 and DSE disabled.
 
 ![](pictures/6.png)
 
