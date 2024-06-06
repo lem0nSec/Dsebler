@@ -11,7 +11,7 @@ The Microsoft Kernel Mode Security Support Provider Interface (KsecDD) is a kern
 
 
 The case statement first checks whether the buffer length which was sent from userland is 16. If so it passes execution to KsecIoctlHandleFunctionReturn.
-The parameter that is passed to KsecIoctlHandleFunctionReturn is a 16-byte-large data structure which I named IPC_SET_FUNCTION_RETURN_PARAMETER. The struct holds two 8-byte values. The first is a pointer to a second 16-byte data structure which in turn holds a pointer which will be the custom address to be executed (rip), whereas the second value is a pointer to the first parameter that is passed at execution time (rcx). Going back to the main struct, the second 8-byte value is the value that will go into rdx at execution time.
+The parameter that is passed to KsecIoctlHandleFunctionReturn is a 16-byte-large data structure which I named IPC_SET_FUNCTION_RETURN_PARAMETER. The struct holds three values. The first is a pointer to a second 16-byte data structure which in turn holds a pointer which will be the custom address to be executed (rip), and another 8-byte large element which will be the first parameter that is passed at execution time (rcx). Going back to the main struct, the second value is a 4-byte-large element which will go into rdx at execution time. The third 4-byte value is not needed.
 
 ![](pictures/8.png)
 
